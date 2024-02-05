@@ -16,7 +16,7 @@ In the controller method, we will pass a list of registered email addresses to t
     	![Local Image](Screenshots/2a.png)
 1.	Run the project 
 
-## I’m need to know what’s going on..show me step-by-step guide:
+## I need to know what’s going on..show me step-by-step guide:
 1.	Application Setup:
 	1.	Create an ASP.NET Core Web App (MVC) in Visual Studio.
  	![Local Image](Screenshots/1a.png)
