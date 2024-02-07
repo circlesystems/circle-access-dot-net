@@ -31,6 +31,29 @@ public class CircleAccessSession
         WriteKey = writeKey;
     }
 
+    /*public async Task<Boolean> (string sessionId, string userId)
+    {
+        try
+        {
+            var dataObj = new { sessionID = sessionId, userID = userId };
+            var sig = ComputeSignature(JsonConvert.SerializeObject(dataObj), WriteKey);
+            var obj = new { data = dataObj, signature = sig };
+
+            using HttpClient client = new HttpClient();
+            client.Timeout = new TimeSpan(0, 1, 0, 0);
+            client.DefaultRequestHeaders.Add("x-ua-appKey", AppKey);
+            var content = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
+
+            var r = client.PostAsync("https://circleaccess.circlesecurity.ai/api/user/session/expire", content).Result;
+            return r.StatusCode == HttpStatusCode.OK;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        return false;
+    }
+*/
     public async Task<dynamic> GetSessionAsync(string sessionId, Boolean bExpireSession = true)
     {
         try
