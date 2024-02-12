@@ -24,6 +24,7 @@ namespace CircleAccessDemo.Controllers
         {
             List<string> registeredEmails = new List<string>()
             {
+                "abhishek.ghosh@circlesecurity.ai",
                 "shivam.singhal@circlesecurity.ai",
                 "gene.allen@circlesecurity.ai",
                 "mickeymouserules@toonmail.com",
