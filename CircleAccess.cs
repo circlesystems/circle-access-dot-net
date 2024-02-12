@@ -27,10 +27,33 @@ public class CircleAccessSession
     public CircleAccessSession(string appKey, string readKey, string writeKey)
     {
         AppKey = appKey;
-        ReadKey = readKey; 
+        ReadKey = readKey;
         WriteKey = writeKey;
     }
 
+    /*public async Task<Boolean> (string sessionId, string userId)
+    {
+        try
+        {
+            var dataObj = new { sessionID = sessionId, userID = userId };
+            var sig = ComputeSignature(JsonConvert.SerializeObject(dataObj), WriteKey);
+            var obj = new { data = dataObj, signature = sig };
+
+            using HttpClient client = new HttpClient();
+            client.Timeout = new TimeSpan(0, 1, 0, 0);
+            client.DefaultRequestHeaders.Add("x-ua-appKey", AppKey);
+            var content = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
+
+            var r = client.PostAsync("https://circleaccess.circlesecurity.ai/api/user/session/expire", content).Result;
+            return r.StatusCode == HttpStatusCode.OK;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        return false;
+    }
+*/
     public async Task<dynamic> GetSessionAsync(string sessionId, Boolean bExpireSession = true)
     {
         try
@@ -82,6 +105,90 @@ public class CircleAccessSession
         }
         return null;
     }
+
+    public async Task<bool> CreateAuthorizationAsync(string returnUrl, string question, string customID, object[] approvals)
+    {
+        try
+        {
+            var dataObj = new
+            {
+                returnUrl = returnUrl,
+                question = question,
+                customID = customID,
+                approvals = approvals
+            };
+
+            var signature = ComputeSignature(JsonConvert.SerializeObject(dataObj), WriteKey);
+            var obj = new { data = dataObj, signature = signature };
+
+            using HttpClient client = new HttpClient();
+            client.Timeout = new TimeSpan(0, 1, 0, 0);
+            client.DefaultRequestHeaders.Add("x-ua-appKey", AppKey);
+            var content = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync("https://circleaccess.circlesecurity.ai/api/authorization/create/", content);
+            return response.StatusCode == HttpStatusCode.OK;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+
+        }
+        return false;
+    }
+
+    public async Task<dynamic> GetAuthorizationContract(string authID)
+    {
+        try
+        {
+            string toSign = string.Format($"?authID={authID}");
+            string sig = ComputeSignature(toSign, WriteKey);
+            string URL = $"https://circleaccess.circlesecurity.ai/api/authorization/get/{toSign}&signature={sig}";
+
+            using HttpClient client = new HttpClient();
+            client.Timeout = new TimeSpan(0, 1, 0, 0);
+            client.DefaultRequestHeaders.Add("x-ua-appKey", AppKey);
+
+            var response = await client.GetAsync(URL);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                string responseData = await response.Content.ReadAsStringAsync();
+                dynamic obj = JObject.Parse(responseData);
+
+                // Assuming obj.Data is a JToken (JSON object)
+                JToken toTest = obj.data;
+                // Convert the JToken to a string without formatting
+
+                string rawJson = JsonConvert.SerializeObject(toTest, new JsonSerializerSettings
+                {
+                    StringEscapeHandling = StringEscapeHandling.Default
+                });
+                string toCheck = ComputeSignature(rawJson, ReadKey);
+                string signature = obj.signature;
+
+                if (toCheck != signature)
+                {
+                    Console.WriteLine("Signature check failed!");
+                    return null;
+                }
+
+                dynamic data = obj.data;
+                return data;
+            }
+            else
+            {
+                Console.WriteLine($"Failed to retrieve authorization contract. Status code: {response.StatusCode}");
+            }
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        return null;
+    }
+
     public async Task<Boolean> ExpireSessionAsync(string sessionId, string userId)
     {
         try
