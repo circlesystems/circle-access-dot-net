@@ -1,8 +1,11 @@
 ﻿using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
+
 
 public class CircleAccessSettings
 {
@@ -18,14 +21,17 @@ public class CircleAccessStatus
     public string Email { get; set; }
     public string ErrorMsg { get; set; }
 }
-public class CircleAccessSession
+
+public class CircleAccess
 {
     string AppKey { get; }
     string ReadKey { get; }
     string WriteKey { get; }
+    private readonly HttpClient _httpClient;
 
-    public CircleAccessSession(string appKey, string readKey, string writeKey)
+    public CircleAccess(string appKey, string readKey, string writeKey)
     {
+        _httpClient = new HttpClient();
         AppKey = appKey;
         ReadKey = readKey;
         WriteKey = writeKey;
@@ -106,7 +112,7 @@ public class CircleAccessSession
         return null;
     }
 
-    public async Task<bool> CreateAuthorizationAsync(string returnUrl, string question, string customID, object[] approvals)
+    public async Task<string> CreateAuthorizationAsync(string returnUrl, string question, string customID, object[] approvals)
     {
         try
         {
@@ -127,14 +133,20 @@ public class CircleAccessSession
             var content = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
 
             var response = await client.PostAsync("https://circleaccess.circlesecurity.ai/api/authorization/create/", content);
-            return response.StatusCode == HttpStatusCode.OK;
+            // return response.StatusCode == HttpStatusCode.OK;
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var responseData = JsonConvert.DeserializeObject<dynamic>(responseContent);
+                return responseData.data.authID;
+            }
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
 
         }
-        return false;
+        return null;
     }
 
     public async Task<dynamic> GetAuthorizationContract(string authID)

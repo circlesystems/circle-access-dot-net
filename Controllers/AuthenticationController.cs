@@ -39,7 +39,7 @@ namespace CircleAccessDemo.Controllers
                 "daffyducklooneytunes@funnymail.dev"
             };
 
-            CircleAccessSession caSession = new CircleAccessSession(_caSettings.AppKey, _caSettings.ReadKey, _caSettings.WriteKey);
+            CircleAccess caSession = new CircleAccess(_caSettings.AppKey, _caSettings.ReadKey, _caSettings.WriteKey);
             CircleAccessStatus cas = await caSession.GetScanningEmailAsync(sessionID, userID, registeredEmails);
             if (cas.Success)
             {
