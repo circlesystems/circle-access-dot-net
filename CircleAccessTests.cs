@@ -115,7 +115,7 @@ public class CircleAccessTests
         Console.WriteLine(result);
 
         // Assert
-        // ClassicAssert.AreEqual(expectedAuthID, result);
+        ClassicAssert.IsNotNull(result);
     }
 
     [Test]
@@ -164,7 +164,7 @@ public class CircleAccessTests
         Console.WriteLine(expectedData.data);
 
         // Assert
-        // ClassicAssert.AreEqual(expectedData.data, result);
+        ClassicAssert.IsNotNull(result);
     }
     [Test]
     public async Task CreateAuhtorizationWithGetAuthorizationContract()
@@ -191,60 +191,7 @@ public class CircleAccessTests
         Console.WriteLine(result);
         dynamic expectedData = await _circleAccessSession.GetAuthorizationContract(result);
         Console.WriteLine(expectedData);
-    }
-
-    [Test]
-    public async Task CreateAuhtorization_WithEmptyCustomID()
-    {
-        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
-        string question = "Confirm 1 ETH withdrawal?";
-        string customId = "";
-        var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 10,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
-        Console.WriteLine("Create Authorization with Empty Custom ID");
-        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
-        if (result == null) Console.WriteLine("Error");
-        else Console.WriteLine(result);
-        ClassicAssert.IsNull(result);
-    }
-
-    [Test]
-    public async Task CreateAuhtorization_WithEmptyQuestion()
-    {
-        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
-        string question = "";
-        string customId = "123";
-        var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 10,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
-        Console.WriteLine("Create Authorization with Empty Question");
-        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
-        if (result == null) Console.WriteLine("Error");
-        else Console.WriteLine(result);
-        ClassicAssert.IsNull(result);
+        ClassicAssert.IsNotNull(expectedData);
     }
 
     [Test]
@@ -271,8 +218,67 @@ public class CircleAccessTests
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
         else Console.WriteLine(result);
-        ClassicAssert.IsNull(result);
+        string err = "You need the returnUrl parameter";
+        ClassicAssert.AreEqual(err, result);
     }
+
+    [Test]
+    public async Task CreateAuhtorization_WithEmptyQuestion()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "";
+        string customId = "123";
+        var approvals = new Approval[] {
+        new Approval {
+                email = "curcio@me.com",
+                weight = 10,
+                required = false,
+                phone = null
+            },
+            new Approval {
+                email = "curcio@me.com",
+                weight = 90,
+                required = false,
+                phone = null
+            }
+        };
+        Console.WriteLine("Create Authorization with Empty Question");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        string err = "You need the question parameter. Min 9 characters. Max 310 characters";
+        ClassicAssert.AreEqual(err, result);
+    }
+
+    [Test]
+    public async Task CreateAuhtorization_WithEmptyCustomID()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "Confirm 1 ETH withdrawal?";
+        string customId = "";
+        var approvals = new Approval[] {
+        new Approval {
+                email = "curcio@me.com",
+                weight = 10,
+                required = false,
+                phone = null
+            },
+            new Approval {
+                email = "curcio@me.com",
+                weight = 90,
+                required = false,
+                phone = null
+            }
+        };
+        Console.WriteLine("Create Authorization with Empty Custom ID");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        string err = "You need the customID parameter. Max 256 characters. The customID parameter can be anything to track back to your system. Example: 'session-123'";
+        ClassicAssert.AreEqual(err, result);
+    }
+
+
     [Test]
     public async Task CreateAuhtorization_WithEmptyApproval()
     {
@@ -284,10 +290,11 @@ public class CircleAccessTests
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
         else Console.WriteLine(result);
-        ClassicAssert.IsNull(result);
+        string err = "You need at least one approval";
+        ClassicAssert.AreEqual(err, result);
     }
     [Test]
-    public async Task CreateAuhtorization_InvalidEmailInApproval()
+    public async Task CreateAuhtorization_NullEmail_NullPhone_InApproval()
     {
         string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
         string question = "Confirm 1 ETH withdrawal?";
@@ -295,19 +302,103 @@ public class CircleAccessTests
         var approvals = new Approval[] {
         new Approval {
                 email = null,
-                weight = 10,
+                weight = 100,
                 required = false,
                 phone = null
             }
         };
-        Console.WriteLine("Create Authorization with Invalid Email in Approval");
+        Console.WriteLine("Create Authorization with No Email & No Phone in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
         else Console.WriteLine(result);
-        ClassicAssert.IsNull(result);
+        string err = "Approval object needs at least one parameter. Email or phone ";
+        ClassicAssert.AreEqual(err, result);
     }
     [Test]
-    public async Task CreateAuthorization_InvalidWeightInApproval()
+    public async Task CreateAuhtorization_NullEmail_ValidPhone_InApproval()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "Confirm 1 ETH withdrawal?";
+        string customId = "123";
+        var approvals = new Approval[] {
+        new Approval {
+                email = null,
+                weight = 100,
+                required = false,
+                phone = "+919090909090"
+            }
+        };
+        Console.WriteLine("Create Authorization with No Email & Valid Phone in Approval");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        // string err = "Approval object needs at least one parameter. Email or phone ";
+        ClassicAssert.IsNotNull(result);
+    }
+    [Test]
+    public async Task CreateAuhtorization_NullEmail_InValidPhone_InApproval()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "Confirm 1 ETH withdrawal?";
+        string customId = "123";
+        var approvals = new Approval[] {
+        new Approval {
+                email = null,
+                weight = 100,
+                required = false,
+                phone = "9090909090" // Invalid Phone means not starting with country code
+            }
+        };
+        Console.WriteLine("Create Authorization with No Email & InValid Phone in Approval");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        string err = "Approval phone is not valid.The phone parameter needs the country code with + and digits only. Min 10 digits. Max 16 digits. Example: +14074139270";
+        ClassicAssert.AreEqual(err, result);
+    }
+    [Test]
+    public async Task CreateAuhtorization_ValidEmail_NullPhone_InApproval()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "Confirm 1 ETH withdrawal?";
+        string customId = "123";
+        var approvals = new Approval[] {
+        new Approval {
+                email = "curcio@me.com",
+                weight = 100,
+                required = false,
+                phone = null // Invalid Phone means not starting with country code
+            }
+        };
+        Console.WriteLine("Create Authorization with Valid Email & Null Phone in Approval");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        ClassicAssert.IsNotNull(result);
+    }
+    [Test]
+    public async Task CreateAuhtorization_ValidEmail_ValidPhone_InApproval()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "Confirm 1 ETH withdrawal?";
+        string customId = "123";
+        var approvals = new Approval[] {
+        new Approval {
+                email = "curcio@me.com",
+                weight = 100,
+                required = false,
+                phone = "+919090909090"
+            }
+        };
+        Console.WriteLine("Create Authorization with Valid Email & Valid Phone in Approval");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        string err = "Approval can only have one parameter. Email or phone";
+        ClassicAssert.AreEqual(err, result);
+    }
+    [Test]
+    public async Task CreateAuthorization_WeightMoreThan100_InApproval()
     {
         string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
         string question = "Confirm 1 ETH withdrawal?";
@@ -326,10 +417,75 @@ public class CircleAccessTests
                 phone = null
             }
         };
-        Console.WriteLine("Create Authorization with Invalid Weight in Approval");
+        Console.WriteLine("Create Authorization with Weight More then 100 in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
         else Console.WriteLine(result);
-        ClassicAssert.IsNull(result);
+        string err = "Approval weight can not be more than 100";
+        ClassicAssert.AreEqual(err, result);
+    }
+    [Test]
+    public async Task CreateAuthorization_SumofWeightLessThan100_InApproval()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "Confirm 1 ETH withdrawal?";
+        string customId = "123";
+        var approvals = new Approval[] {
+        new Approval {
+                email = "curcio@me.com",
+                weight = 5,
+                required = false,
+                phone = null
+            },
+            new Approval {
+                email = "curcio@me.com",
+                weight = 90,
+                required = false,
+                phone = null
+            }
+        };
+        Console.WriteLine("Create Authorization with Sum of weight <100");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        string err = "Approval weights must add up to at least 100";
+        ClassicAssert.AreEqual(err, result);
+    }
+    [Test]
+    public async Task CreateAuthorization_SumofWeightGreaterThan100_InApproval()
+    {
+        string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
+        string question = "Confirm 1 ETH withdrawal?";
+        string customId = "123";
+        var approvals = new Approval[] {
+        new Approval {
+                email = "curcio@me.com",
+                weight = 50,
+                required = false,
+                phone = null
+            },
+            new Approval {
+                email = "curcio@me.com",
+                weight = 90,
+                required = false,
+                phone = null
+            }
+        };
+        Console.WriteLine("Create Authorization with Sum of weight >=100");
+        var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        ClassicAssert.IsNotNull(result);
+    }
+    [Test]
+    public async Task GetAuthorizationContract_WithInvalidAuthID()
+    {
+        string authID = "";
+        Console.WriteLine("Get Authorization Contract with Invalid AuthID");
+        var result = await _circleAccessSession.GetAuthorizationContract(authID);
+        if (result == null) Console.WriteLine("Error");
+        else Console.WriteLine(result);
+        string err = "Unauthorized";
+        ClassicAssert.AreEqual(err, result);
     }
 }
