@@ -198,7 +198,9 @@ public class CircleAccess
             }
             else
             {
-                Console.WriteLine($"Failed to retrieve authorization contract. Status code: {response.StatusCode}");
+                // Console.WriteLine($"Failed to retrieve authorization contract. Status code: {response.StatusCode}");
+                // Console.WriteLine(response.StatusCode);
+                return response.StatusCode.ToString();
             }
 
         }
