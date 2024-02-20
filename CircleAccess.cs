@@ -138,7 +138,15 @@ public class CircleAccess
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
                 var responseData = JsonConvert.DeserializeObject<dynamic>(responseContent);
+                // Console.WriteLine(responseData);
                 return responseData.data.authID;
+            }
+            else
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var responseData = JsonConvert.DeserializeObject<dynamic>(responseContent);
+                // Console.WriteLine(responseData);
+                return responseData.error;
             }
         }
         catch (Exception e)
