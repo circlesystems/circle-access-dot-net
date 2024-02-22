@@ -5,7 +5,13 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-
+public class Approval
+{
+    public string email { get; set; }
+    public int weight { get; set; }
+    public bool required { get; set; }
+    public string phone { get; set; }
+}
 
 public class CircleAccessSettings
 {
@@ -72,6 +78,7 @@ public class CircleAccess
             client.Timeout = new TimeSpan(0, 1, 0, 0);
             client.DefaultRequestHeaders.Add("x-ua-appKey", AppKey);
             var response = await client.GetAsync(URL);
+            // Console.WriteLine(response);
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 string responseString = await response.Content.ReadAsStringAsync();
@@ -86,23 +93,27 @@ public class CircleAccess
                 });
                 string toCheck = ComputeSignature(rawJson, ReadKey);
                 string signature = obj.signature;
-                if (toCheck != signature)
+                if (toCheck == signature)
+                {
+                    dynamic data = obj.data;
+                    string userID = data.userID;
+                    if (bExpireSession)
+                    {
+                        if (await ExpireSessionAsync(sessionId, userID) == null)
+                        {
+                            Console.WriteLine("Failed to expire session!");
+                        }
+                    }
+
+                    return data;
+                }
+                else
                 {
                     Console.WriteLine("Signature check failed!");
                     return null;
                 }
 
-                dynamic data = obj.data;
-                string userID = data.userID;
-                if (bExpireSession)
-                {
-                    if (!await ExpireSessionAsync(sessionId, userID))
-                    {
-                        Console.WriteLine("Failed to expire session!");
-                    }
-                }
-
-                return data;
+                
             }
         }
         catch (Exception e)
@@ -111,6 +122,70 @@ public class CircleAccess
         }
         return null;
     }
+
+    public async Task<dynamic> GetUserSessionAsync(string sessionId, string userId, Boolean bExpireSession = true)
+    {
+        try
+        {
+            string dataToSign = string.Format($"?sessionID={sessionId}&userID={userId}");
+            string signature = ComputeSignature(dataToSign, WriteKey);
+            string signedData = string.Format($"{dataToSign}&signature={signature}");
+            string URL = string.Format($"https://circleaccess.circlesecurity.ai/api/user/session{signedData}");
+
+            using HttpClient client = new HttpClient();
+            client.Timeout = new TimeSpan(0, 1, 0, 0);
+            client.DefaultRequestHeaders.Add("x-ua-appKey", AppKey);
+
+            var response = await client.GetAsync(URL);
+            // Console.WriteLine(response);
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                string responseString = await response.Content.ReadAsStringAsync();
+                dynamic obj = JObject.Parse(responseString);
+
+                // Assuming obj.data is a JToken (JSON object)
+                JToken toTest = obj.data;
+                // Convert the JToken to a string without formatting
+                string rawJson = JsonConvert.SerializeObject(toTest, new JsonSerializerSettings
+                {
+                    StringEscapeHandling = StringEscapeHandling.Default
+                });
+                string toCheck = ComputeSignature(rawJson, ReadKey);
+                string receivedSignature = obj.signature;
+                if (toCheck == receivedSignature)
+                {
+                    dynamic data = obj.data;
+                    string userID = data.userID;
+                    if (bExpireSession)
+                    {
+                        if (await ExpireSessionAsync(sessionId, userID) == null)
+                        {
+                            Console.WriteLine("Failed to expire session!");
+                        }
+                    }
+
+                    return data;
+                }
+                else
+                {
+                    Console.WriteLine("Signature check failed!");
+                    return null;
+                }
+
+                
+            }
+            else
+            {
+                return null;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+        return null;
+    }
+
 
     public async Task<string> CreateAuthorizationAsync(string returnUrl, string question, string customID, object[] approvals)
     {
@@ -211,7 +286,7 @@ public class CircleAccess
         return null;
     }
 
-    public async Task<Boolean> ExpireSessionAsync(string sessionId, string userId)
+    public async Task<dynamic> ExpireSessionAsync(string sessionId, string userId)
     {
         try
         {
@@ -224,14 +299,28 @@ public class CircleAccess
             client.DefaultRequestHeaders.Add("x-ua-appKey", AppKey);
             var content = new StringContent(JsonConvert.SerializeObject(obj), Encoding.UTF8, "application/json");
 
-            var r = client.PostAsync("https://circleaccess.circlesecurity.ai/api/user/session/expire", content).Result;
-            return r.StatusCode == HttpStatusCode.OK;
+            var response = client.PostAsync("https://circleaccess.circlesecurity.ai/api/user/session/expire", content).Result;
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var responseData = JsonConvert.DeserializeObject<dynamic>(responseContent);
+                // Console.WriteLine(responseData);
+                return responseData.data;
+            }
+            else
+            {
+                //var responseContent = await response.Content.ReadAsStringAsync();
+                //var responseData = JsonConvert.DeserializeObject<dynamic>(responseContent);
+                //// Console.WriteLine(responseData);
+                //return responseData.error;
+                return null;
+            }
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
         }
-        return false;
+        return null;
     }
 
     public async Task<CircleAccessStatus> GetScanningEmailAsync(string sessionId, string userId, List<string> emailsToCheck)
