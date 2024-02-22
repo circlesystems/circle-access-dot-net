@@ -10,36 +10,6 @@ using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework.Legacy;
-
-
-public class Approval
-{
-    public string email { get; set; }
-    public int weight { get; set; }
-    public bool required { get; set; }
-    public string phone { get; set; }
-}
-public class Data
-{
-    public Approval[] approvals { get; set; }
-    public string authID { get; set; }
-    public long creationMiliUnixTime { get; set; }
-    public string customID { get; set; }
-    public string factorID { get; set; }
-    public string factorUrl { get; set; }
-    public long lastUpdateMiliUnixTime { get; set; }
-    public string question { get; set; }
-    public string returnUrl { get; set; }
-    public string state { get; set; }
-    public string type { get; set; }
-}
-
-public class AuthorizationResponse
-{
-    public Data data { get; set; }
-    public string signature { get; set; }
-}
-
 public interface IHttpClientWrapper
 {
     Task<HttpResponseMessage> PostAsync(string requestUri, HttpContent content);
@@ -56,7 +26,7 @@ public class CircleAccessTests
     public void Setup()
     {
         _mockHttpClient = new Mock<HttpClient>();
-        _circleAccessSession = new CircleAccess("YOUR_APPKEY", "YOUR_READKEY", "YOUR_WRITEKEY");
+        _circleAccessSession = new CircleAccess("APP_ID", "READ_KEY", "WRITE_KEY");
 
         // Use reflection to set the private field '_httpClient'
         // var httpClientField = typeof(CircleAccessSession).GetField("_httpClient", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -83,27 +53,66 @@ public class CircleAccessTests
         }
     }
 
+
+    // Get Session, get user session and expire session tests
+
     [Test]
-    public async Task CreateAuthorizationAsync_ValidData_ReturnsAuthID()
+    public async Task GetSessionAsync_withSessionID()
+    {
+        string sessionID = "session5rSDM3EFGVw8Si8B2s8hCWzxT5XdpiADZ";
+        string userID = "46369f9d8baa24567f04472d1988991766adf45687ef5fc6553fbc2a86c675ba";
+        var result = await _circleAccessSession.GetSessionAsync(sessionID);
+        Console.WriteLine(result);
+        //string jsonString = JsonConvert.SerializeObject(result, Formatting.Indented);
+        //Console.WriteLine(jsonString);
+        ClassicAssert.AreEqual(userID, result.userID.ToString());
+    }
+
+    [Test]
+    public async Task GetUserSessionAsync_withSessionIDandUserID()
+    {
+        string sessionID = "session5rSDM3EFGVw8Si8B2s8hCWzxT5XdpiADZ";
+        string userID = "46369f9d8baa24567f04472d1988991766adf45687ef5fc6553fbc2a86c675ba";
+        dynamic result = await _circleAccessSession.GetUserSessionAsync(sessionID, userID);
+        Console.WriteLine(result);
+        //string jsonString = JsonConvert.SerializeObject(result, Formatting.Indented);
+        //Console.WriteLine(jsonString);
+        ClassicAssert.AreEqual(userID, result.userID.ToString());
+    }
+    [Test]
+    public async Task ExpireUserSessionAsync_withSessionIDandUserID()
+    {
+        string sessionID = "session5rSDM3EFGVw8Si8B2s8hCWzxT5XdpiADZ";
+        string userID = "46369f9d8baa24567f04472d1988991766adf45687ef5fc6553fbc2a86c675ba";
+        var result = await _circleAccessSession.ExpireSessionAsync(sessionID, userID);
+        Console.WriteLine(result);
+        ClassicAssert.AreEqual(userID, result.userID.ToString());
+    }
+
+
+    //Create Authorization and get Authorization Tests
+
+   [Test]
+     public async Task CreateAuthorizationAsync_ValidData_ReturnsAuthID()
     {
         // Arrange
         string returnUrl = "http://circleaccess.circlesecurity.ai/demo/authorization/";
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 10,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 10,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         var expectedAuthID = "auth7V9ySbXQHDgaNcbUsZU";
         // var responseContent = $"{{ \"data\": {{ \"authID\": \"{expectedAuthID}\" }} }}";
         // var responseMessage = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(responseContent) };
@@ -124,33 +133,33 @@ public class CircleAccessTests
         // Arrange
         string authID = "auth7V9ySbXQHDgaNcbUsZU";
         string jsonData = @"
-                {
-                    ""data"": {
-                        ""approvals"": [
-                            {
-                                ""email"": ""curcio@me.com"",
-                                ""required"": false,
-                                ""weight"": 10
-                            },
-                            {
-                                ""email"": ""curcio@me.com"",
-                                ""required"": false,
-                                ""weight"": 90
-                            }
-                        ],
-                        ""authID"": ""authDGKM9jEoRM5rGCbmRNd"",
-                        ""creationMiliUnixTime"": 1707406227424,
-                        ""customID"": ""123"",
-                        ""factorID"": ""factorNxnL712RpqVXoAacHHWWWUSdUCAwdtEwJ"",
-                        ""factorUrl"": ""https://circleaccess.circlesecurity.ai/2fa/appNvYLUHGqLJQYxUKdf2DBcRuNtWPTs7chc/factorNxnL712RpqVXoAacHHWWWUSdUCAwdtEwJ"",
-                        ""lastUpdateMiliUnixTime"": 1707406227424,
-                        ""question"": ""Confirm 1 ETH withdrawal?"",
-                        ""returnUrl"": ""http://circleaccess.circlesecurity.ai/demo/authorization/"",
-                        ""state"": ""pending"",
-                        ""type"": ""authorization""
-                    },
-                    ""signature"": ""twklZM0tHgHrB9uHs06V63ZnMtdLA0ASC2JcHl8Xna0=""
-                }";
+                  {
+                      ""data"": {
+                          ""approvals"": [
+                              {
+                                  ""email"": ""curcio@me.com"",
+                                  ""required"": false,
+                                  ""weight"": 10
+                              },
+                              {
+                                  ""email"": ""curcio@me.com"",
+                                  ""required"": false,
+                                  ""weight"": 90
+                              }
+                          ],
+                          ""authID"": ""authDGKM9jEoRM5rGCbmRNd"",
+                          ""creationMiliUnixTime"": 1707406227424,
+                          ""customID"": ""123"",
+                          ""factorID"": ""factorNxnL712RpqVXoAacHHWWWUSdUCAwdtEwJ"",
+                          ""factorUrl"": ""https://circleaccess.circlesecurity.ai/2fa/appNvYLUHGqLJQYxUKdf2DBcRuNtWPTs7chc/factorNxnL712RpqVXoAacHHWWWUSdUCAwdtEwJ"",
+                          ""lastUpdateMiliUnixTime"": 1707406227424,
+                          ""question"": ""Confirm 1 ETH withdrawal?"",
+                          ""returnUrl"": ""http://circleaccess.circlesecurity.ai/demo/authorization/"",
+                          ""state"": ""pending"",
+                          ""type"": ""authorization""
+                      },
+                      ""signature"": ""twklZM0tHgHrB9uHs06V63ZnMtdLA0ASC2JcHl8Xna0=""
+                  }";
 
         // Deserialize the JSON into AuthorizationResponse object
         // var expectedData = JsonConvert.DeserializeObject<AuthorizationResponse>(jsonData);
@@ -173,19 +182,19 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 10,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 10,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with Get Authorization Contract");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         Console.WriteLine(result);
@@ -201,19 +210,19 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 10,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 10,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with Empty Return Url");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -229,27 +238,26 @@ public class CircleAccessTests
         string question = "";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 10,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 10,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with Empty Question");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
         else Console.WriteLine(result);
-        string err = "You need the question parameter. Min 9 characters. Max 310 characters";
+        string err = "You need the question parameter. Min 10 characters. Max 310 characters";
         ClassicAssert.AreEqual(err, result);
     }
-
     [Test]
     public async Task CreateAuhtorization_WithEmptyCustomID()
     {
@@ -257,19 +265,19 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 10,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 10,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with Empty Custom ID");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -277,8 +285,6 @@ public class CircleAccessTests
         string err = "You need the customID parameter. Max 256 characters. The customID parameter can be anything to track back to your system. Example: 'session-123'";
         ClassicAssert.AreEqual(err, result);
     }
-
-
     [Test]
     public async Task CreateAuhtorization_WithEmptyApproval()
     {
@@ -300,13 +306,13 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = null,
-                weight = 100,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = null,
+                  weight = 100,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with No Email & No Phone in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -321,13 +327,13 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = null,
-                weight = 100,
-                required = false,
-                phone = "+919090909090"
-            }
-        };
+          new Approval {
+                  email = null,
+                  weight = 100,
+                  required = false,
+                  phone = "+919090909090"
+              }
+          };
         Console.WriteLine("Create Authorization with No Email & Valid Phone in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -342,13 +348,13 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = null,
-                weight = 100,
-                required = false,
-                phone = "9090909090" // Invalid Phone means not starting with country code
-            }
-        };
+          new Approval {
+                  email = null,
+                  weight = 100,
+                  required = false,
+                  phone = "9090909090" // Invalid Phone means not starting with country code
+              }
+          };
         Console.WriteLine("Create Authorization with No Email & InValid Phone in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -363,13 +369,13 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 100,
-                required = false,
-                phone = null // Invalid Phone means not starting with country code
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 100,
+                  required = false,
+                  phone = null // Invalid Phone means not starting with country code
+              }
+          };
         Console.WriteLine("Create Authorization with Valid Email & Null Phone in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -383,13 +389,13 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 100,
-                required = false,
-                phone = "+919090909090"
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 100,
+                  required = false,
+                  phone = "+919090909090"
+              }
+          };
         Console.WriteLine("Create Authorization with Valid Email & Valid Phone in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -404,19 +410,19 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 1000,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 1000,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with Weight More then 100 in Approval");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -431,19 +437,19 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 5,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 5,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with Sum of weight <100");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
@@ -458,19 +464,19 @@ public class CircleAccessTests
         string question = "Confirm 1 ETH withdrawal?";
         string customId = "123";
         var approvals = new Approval[] {
-        new Approval {
-                email = "curcio@me.com",
-                weight = 50,
-                required = false,
-                phone = null
-            },
-            new Approval {
-                email = "curcio@me.com",
-                weight = 90,
-                required = false,
-                phone = null
-            }
-        };
+          new Approval {
+                  email = "curcio@me.com",
+                  weight = 50,
+                  required = false,
+                  phone = null
+              },
+              new Approval {
+                  email = "curcio@me.com",
+                  weight = 90,
+                  required = false,
+                  phone = null
+              }
+          };
         Console.WriteLine("Create Authorization with Sum of weight >=100");
         var result = await _circleAccessSession.CreateAuthorizationAsync(returnUrl, question, customId, approvals);
         if (result == null) Console.WriteLine("Error");
